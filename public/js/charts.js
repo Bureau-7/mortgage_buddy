@@ -93,13 +93,21 @@ export function splitDonut(el, principal, interest, symbol) {
       textStyle: { color: '#f4f0e6', fontFamily: 'IBM Plex Mono, monospace', fontSize: 11 },
       valueFormatter: (v) => symbol + Number(v).toLocaleString(undefined, { maximumFractionDigits: 0 }),
     },
-    legend: { ...legend, bottom: 0, top: 'auto' },
+    legend: {
+      bottom: 0, top: 'auto',
+      icon: 'roundRect', itemWidth: 13, itemHeight: 13, itemGap: 18,
+      textStyle: { color: INK, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11 },
+      data: [
+        { name: 'Principal', itemStyle: { color: INK } },
+        { name: 'Interest', itemStyle: { color: ACCENT } },
+      ],
+    },
     series: [{
       type: 'pie',
-      radius: ['52%', '78%'],
-      center: ['50%', '46%'],
+      radius: ['52%', '76%'],
+      center: ['50%', '44%'],
       avoidLabelOverlap: false,
-      itemStyle: { borderColor: '#f4f0e6', borderWidth: 2 },
+      itemStyle: { borderColor: '#fffdf7', borderWidth: 2 },
       label: { show: true, formatter: '{d}%', color: INK, fontFamily: 'IBM Plex Mono, monospace', fontSize: 11 },
       data: [
         { value: principal, name: 'Principal', itemStyle: { color: INK } },
