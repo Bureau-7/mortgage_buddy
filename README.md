@@ -33,6 +33,11 @@ Guided wizard with a progress stepper · single assembled report · **Download P
 callouts · interest/principal donut · CSV export of the schedule · currency selector
 (£/$/€).
 
+**Insights & pressure-tests** · by-the-numbers callouts (total-cost ratio,
+interest share, crossover month), an overpayment ladder and rate-shock table, and an
+overpay-vs-invest comparison, all pure math from your own inputs, with light inline
+hints under each step. Figures only, never advice.
+
 ## Run it
 
 ```bash

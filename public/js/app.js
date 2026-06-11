@@ -28,6 +28,14 @@ function fmtNum(n) {
 }
 const parseNum = (s) => parseFloat(String(s).replace(/,/g, ''));
 
+const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+// 'YYYY-MM' -> 'Month YYYY'.
+function fmtMonth(s) {
+  if (!s) return '—';
+  const [y, m] = String(s).split('-').map((x) => parseInt(x, 10));
+  return `${MONTH_NAMES[(m || 1) - 1] || ''} ${y}`;
+}
+
 async function api(path, body) {
   const res = await fetch(path, {
     method: 'POST',
@@ -57,6 +65,8 @@ function goTo(step) {
     d.classList.toggle('is-done', n < step && MAX_REACHED[n]);
   });
   window.scrollTo({ top: 0, behavior: 'smooth' });
+  if (step === 2) showSimHint();
+  if (step === 3) showSavHint();
   if (step === 4) buildReport();
   setTimeout(resizeAll, 80);
 }
@@ -109,6 +119,17 @@ async function computeMortgage() {
   res.innerHTML = `Monthly payment <strong>${fmtMoney(data.schedule[0]['Total Payment'])}</strong> · `
     + `paid off <strong>${data.payoffDate}</strong> · total interest <strong>${fmtMoney(data.totalInterestPaid)}</strong>`
     + (data.ltv != null ? ` · LTV <strong>${data.ltv.toFixed(2)}%</strong>` : '');
+
+  // Inline hint: total-cost ratio + when payments tip toward principal.
+  const ins = data.insights;
+  const hint = $('#m-hint');
+  if (ins) {
+    const cross = ins.crossover
+      ? `your payments don't tip toward principal until <strong>${fmtMonth(ins.crossover.date)}</strong>`
+      : `your payments lean toward principal from month one`;
+    hint.hidden = false;
+    hint.innerHTML = `For every ${sym()}1 you borrow you repay <strong>${sym()}${ins.totalCostRatio.toFixed(2)}</strong>, and ${cross}.`;
+  }
   return true;
 }
 $('#mortgage-form').addEventListener('submit', (e) => { e.preventDefault(); computeMortgage(); });
@@ -140,6 +161,38 @@ async function computeSim() {
     + `months saved <strong>${data.monthsSaved}</strong> · new payoff <strong>${data.withNew.endDate}</strong>`;
   return true;
 }
+
+// Inline hint under step 2: one rung of the overpayment ladder (the £100 step).
+function showSimHint() {
+  const hint = $('#s-hint');
+  const ladder = state.mortgage?.data?.ladder;
+  if (!hint || !ladder) return;
+  const rung = ladder.find((r) => r.extra === 100) || ladder[0];
+  hint.hidden = false;
+  hint.innerHTML = `An extra <strong>${sym()}${rung.extra}/mo</strong> would clear it about `
+    + `<strong>${rung.monthsSaved}</strong> months early and save <strong>${fmtMoney(rung.interestSaved)}</strong> in interest.`;
+}
+
+// Annuity future value (mirrors investmentFutureValue in src/lib/insights.js).
+function fvAnnuity(monthly, annualRatePct, months) {
+  const i = annualRatePct / 100 / 12;
+  if (i === 0) return monthly * months;
+  return (monthly * ((1 + i) ** months - 1)) / i;
+}
+
+// Inline teaser under step 3: a pot grown at the entered return over the loan term.
+function showSavHint() {
+  const hint = $('#v-hint');
+  if (!hint) return;
+  const r = parseNum($('#v-rate').value);
+  const years = parseInt($('#v-years').value, 10);
+  const monthly = state.sim?.inputs.additionalRepayment > 0 ? state.sim.inputs.additionalRepayment : 200;
+  if (!(years >= 1) || Number.isNaN(r)) { hint.hidden = true; return; }
+  const fv = fvAnnuity(monthly, r, years * 12);
+  hint.hidden = false;
+  hint.innerHTML = `At <strong>${r.toFixed(1)}%</strong>, <strong>${sym()}${monthly}/mo</strong> invested grows to `
+    + `<strong>${fmtMoney(fv)}</strong> over <strong>${years}</strong> years.`;
+}
 $('#sim-form').addEventListener('submit', (e) => { e.preventDefault(); computeSim(); });
 $('#s-skip').addEventListener('click', () => { state.sim = null; $('#s-result').hidden = true; reach(3); goTo(3); });
 $('#s-next').addEventListener('click', async () => { if (await computeSim()) { reach(3); goTo(3); } });
@@ -168,6 +221,7 @@ async function computeSavings() {
   res.innerHTML = `Final balance <strong>${fmtMoney(data.finalBalance)}</strong> · total interest <strong>${fmtMoney(data.totalInterest)}</strong> over <strong>${data.rows.length}</strong> years`;
   return true;
 }
+['#v-rate', '#v-years'].forEach((s) => $(s).addEventListener('input', () => { if (current === 3) showSavHint(); }));
 $('#sav-form').addEventListener('submit', (e) => { e.preventDefault(); computeSavings(); });
 $('#v-skip').addEventListener('click', () => { state.savings = null; $('#v-result').hidden = true; reach(4); goTo(4); });
 $('#v-next').addEventListener('click', async () => { if (await computeSavings()) { reach(4); goTo(4); } });
@@ -214,7 +268,12 @@ function csvDownload(filename, rows, cols) {
   URL.revokeObjectURL(url);
 }
 
-function buildReport() {
+// A one-line-captioned callout for the "By the numbers" strip.
+function fact(value, caption) {
+  return `<div class="fact"><span class="fact__v">${value}</span><span class="fact__c">${caption}</span></div>`;
+}
+
+async function buildReport() {
   if (!state.mortgage) { goTo(1); return; }
   disposeAll();
 
@@ -265,7 +324,25 @@ function buildReport() {
         </figure>
       </div>
       <h3 class="report__h3">Repayment schedule <button type="button" class="link-btn no-print" id="rep-csv">Export CSV</button></h3>
-      ${ledgerHtml(sched, SCHED_COLS, 'months')}
+      ${ledgerHtml(sched, SCHED_COLS, 'months')}`;
+
+  // --- By the numbers (A) ---
+  const ins = m.data.insights;
+  if (ins) {
+    const crossCaption = ins.crossover
+      ? `Payments tip toward principal in ${fmtMonth(ins.crossover.date)}, month ${ins.crossover.index + 1}`
+      : `Payments lean toward principal from month one`;
+    html += `
+      <h3 class="report__h3">By the numbers</h3>
+      <div class="fact-strip">
+        ${fact(`${sym()}${ins.totalCostRatio.toFixed(2)}`, `repaid for every ${sym()}1 borrowed, interest included`)}
+        ${fact(`${ins.interestPctOfLoan.toFixed(1)}%`, `interest as a share of the amount you borrowed`)}
+        ${fact(`${fmtMoney(ins.avgInterestPerDay)}`, `average interest accruing per day across the term`)}
+        ${fact(`${ins.year1InterestShare.toFixed(0)}%`, `of year-one payments goes to interest, not principal`)}
+        ${fact(`${ins.crossover ? 'Mo. ' + (ins.crossover.index + 1) : 'Mo. 1'}`, crossCaption)}
+      </div>`;
+  }
+  html += `
     </section>`;
 
   // --- Section II: Scenario (optional) ---
@@ -325,10 +402,98 @@ function buildReport() {
       </section>`;
   }
 
+  // Roman numerals for the remaining sections (II/III are optional, so count them).
+  const ROMAN = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+  let sectionNo = 1 + (state.sim ? 1 : 0) + (state.savings ? 1 : 0);
+
+  // --- Pressure tests: overpayment ladder (C) + rate-shock (B) ---
+  const ladder = m.data.ladder;
+  const shock = m.data.rateShock;
+  if (ladder && shock) {
+    const ladderRows = ladder.map((r) => ({
+      Extra: `${sym()}${r.extra}/mo`,
+      'Months saved': r.monthsSaved,
+      'Interest saved': r.interestSaved,
+      'New payoff': fmtMonth(r.newPayoff),
+    }));
+    const shockRows = shock.map((r) => ({
+      Change: `+${r.delta}%`,
+      'New rate': `${r.newRate.toFixed(2)}%`,
+      'New monthly': r.newMonthly,
+      'Total interest': r.totalInterest,
+      'Extra interest': r.extraInterest,
+    }));
+    sectionNo += 1;
+    html += `
+      <section class="report__section page-break">
+        <h2 class="report__h">${ROMAN[sectionNo - 1]} · Pressure Tests</h2>
+        <p class="report__note">Same loan, nudged. Overpay a little, or watch the rate climb, and see where the numbers land.</p>
+        <h3 class="report__h3">If you overpaid every month</h3>
+        ${ledgerHtml(ladderRows, [
+          { key: 'Extra', label: 'Extra' },
+          { key: 'Months saved', label: 'Months saved' },
+          { key: 'Interest saved', label: 'Interest saved', fmt: fmtNum },
+          { key: 'New payoff', label: 'New payoff' },
+        ], 'rungs')}
+        <h3 class="report__h3">If the rate rose at renewal</h3>
+        ${ledgerHtml(shockRows, [
+          { key: 'Change', label: 'Change' },
+          { key: 'New rate', label: 'New rate' },
+          { key: 'New monthly', label: 'New monthly', fmt: fmtNum },
+          { key: 'Total interest', label: 'Total interest', fmt: fmtNum },
+          { key: 'Extra interest', label: 'Extra interest', fmt: fmtNum },
+        ], 'steps')}
+      </section>`;
+  }
+
+  // --- Overpay vs invest (D), always shown ---
+  const monthlyOverpay = state.sim?.inputs.additionalRepayment > 0 ? state.sim.inputs.additionalRepayment : 200;
+  const compareRate = state.savings ? state.savings.inputs.annualRate : 5;
+  const usingDefaults = !(state.sim?.inputs.additionalRepayment > 0) || !state.savings;
+  let cmp = null;
+  try {
+    cmp = await api('/api/compare', {
+      interestRate: i.interestRate,
+      yearsLeft: i.yearsLeft,
+      balance: i.balance,
+      startDate: i.startDate,
+      monthlyOverpay,
+      annualRate: compareRate,
+    });
+  } catch (err) { cmp = null; }
+  if (cmp) {
+    sectionNo += 1;
+    const yrs = (cmp.months / 12).toFixed(0);
+    html += `
+      <section class="report__section page-break">
+        <h2 class="report__h">${ROMAN[sectionNo - 1]} · Overpay vs Invest</h2>
+        <p class="report__note">The same ${sym()}${cmp.monthly} a month, sent two ways over ${yrs} years${usingDefaults ? ' (illustrative defaults shown)' : ''}.</p>
+        <div class="vs-grid">
+          <div class="vs-col">
+            <h3 class="report__h3">Invested at ${cmp.annualRate.toFixed(1)}%</h3>
+            <div class="stat-row">
+              ${stat('Contributions', fmtMoney(cmp.invested.contributions))}
+              ${stat('Growth', fmtMoney(cmp.invested.growth), 'good')}
+              ${stat('Future value', fmtMoney(cmp.invested.futureValue))}
+            </div>
+          </div>
+          <div class="vs-col">
+            <h3 class="report__h3">Overpaid on the mortgage</h3>
+            <div class="stat-row">
+              ${stat('Interest saved', fmtMoney(cmp.overpaid.interestSaved), 'good')}
+              ${stat('Months saved', String(cmp.overpaid.monthsSaved))}
+              ${stat('New payoff', fmtMonth(cmp.overpaid.newPayoff))}
+            </div>
+          </div>
+        </div>
+        <p class="report__note">${usingDefaults ? `Assumes ${sym()}${cmp.monthly}/mo and a ${cmp.annualRate.toFixed(1)}% return where you didn't enter your own. ` : ''}These figures aren't apples to apples: overpaying clears the loan early, so the invested pot keeps running for years the mortgage no longer does. Two figures, no verdict.</p>
+      </section>`;
+  }
+
   html += `
     <footer class="report__footer">
       <div class="masthead__rule"></div>
-      <p>The Mortgage Report, generated ${today}. Figures are estimates from standard amortization and compound-interest math, not financial advice. Check the numbers with your lender before you act on them.</p>
+      <p>The Mortgage Report by Bureau-7 · mortgage.bureau7.com, generated ${today}. Figures are estimates from standard amortization and compound-interest math, not financial advice. Check the numbers with your lender before you act on them.</p>
     </footer>`;
 
   $('#report').innerHTML = html;

@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 
 import { calculateMortgagePayments, calculateCompoundInterest } from './lib/calculations.js';
+import { mortgageInsights, rateShock, overpaymentLadder, overpayVsInvest } from './lib/insights.js';
 import { buildSimulationSummary, formatDate, ltv } from './lib/summary.js';
 import { makeFormatters } from './lib/format.js';
 
@@ -42,13 +43,68 @@ fastify.post('/api/mortgage', async (req, reply) => {
   const result = calculateMortgagePayments({ interestRate, yearsLeft, balance, startDate });
   const fmt = makeFormatters(b.currency);
 
+  // Insights derived from step-1 inputs alone, so the report and inline hints
+  // have them whether or not the optional steps run.
+  const insights = mortgageInsights({
+    schedule: result.schedule,
+    totalInterestPaid: result.totalInterestPaid,
+    balance,
+    yearsLeft,
+  });
+  const shock = rateShock({
+    interestRate,
+    yearsLeft,
+    balance,
+    startDate,
+    baselineTotalInterest: result.totalInterestPaid,
+  });
+  const ladder = overpaymentLadder({
+    interestRate,
+    yearsLeft,
+    balance,
+    startDate,
+    baseline: { scheduleLength: result.schedule.length, totalInterestPaid: result.totalInterestPaid },
+  });
+
   return {
     ...result,
     ltv: propertyValue ? ltv(balance, propertyValue) : null,
     payoffDate: result.schedule.length ? result.schedule[result.schedule.length - 1].Date : null,
+    insights,
+    rateShock: shock,
+    ladder,
     currency: fmt.code,
     warnings,
   };
+});
+
+// POST /api/compare — overpay vs invest the same monthly amount (D).
+fastify.post('/api/compare', async (req, reply) => {
+  const b = req.body || {};
+  const balance = num(b.balance);
+  const interestRate = num(b.interestRate ?? 3.5);
+  const yearsLeft = parseInt(b.yearsLeft ?? 30, 10);
+  const startDate = b.startDate || null;
+  const monthlyOverpay = num(b.monthlyOverpay) > 0 ? num(b.monthlyOverpay) : 200;
+  const annualRate = num(b.annualRate) >= 0 && !Number.isNaN(num(b.annualRate)) ? num(b.annualRate) : 5;
+
+  if (!(balance > 0)) {
+    return reply.code(400).send({ error: 'Current Mortgage Balance must be greater than 0.' });
+  }
+
+  const baseline = calculateMortgagePayments({ interestRate, yearsLeft, balance, startDate });
+  const result = overpayVsInvest({
+    interestRate,
+    yearsLeft,
+    balance,
+    startDate,
+    baseline: { scheduleLength: baseline.schedule.length, totalInterestPaid: baseline.totalInterestPaid },
+    monthly: monthlyOverpay,
+    annualRate,
+  });
+  const fmt = makeFormatters(b.currency);
+
+  return { ...result, currency: fmt.code };
 });
 
 // POST /api/simulate — baseline vs new, summary text, savings deltas.
