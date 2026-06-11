@@ -1,0 +1,21 @@
+{
+  "name": "mortgage-buddy",
+  "version": "1.0.0",
+  "description": "The Mortgage Report — an editorial data-viz mortgage repayment, simulation and savings calculator. Node.js port of the original Streamlit app.",
+  "type": "module",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js",
+    "test": "node --test"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@fastify/static": "^7.0.4",
+    "echarts": "^5.5.1",
+    "fastify": "^4.28.1"
+  },
+  "license": "MIT"
+}
