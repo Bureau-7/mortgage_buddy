@@ -238,7 +238,7 @@ function buildReport() {
     <header class="report__masthead">
       <div class="masthead__rule masthead__rule--top"></div>
       <h1 class="report__title">The Mortgage Report</h1>
-      <p class="report__dateline">Prepared ${today} · An editorial repayment &amp; savings brief</p>
+      <p class="report__dateline">Prepared ${today}</p>
       <div class="masthead__rule masthead__rule--bottom"></div>
     </header>
 
@@ -256,11 +256,11 @@ function buildReport() {
       </div>
       <div class="report__figs">
         <figure class="fig fig--wide">
-          <figcaption>Fig. 1 — Monthly payment composition</figcaption>
+          <figcaption>Fig. 1 · Monthly payment composition</figcaption>
           <div class="chart" id="rep-amort"></div>
         </figure>
         <figure class="fig fig--narrow">
-          <figcaption>Fig. 2 — Principal vs interest</figcaption>
+          <figcaption>Fig. 2 · Principal vs interest</figcaption>
           <div class="chart chart--donut" id="rep-donut"></div>
         </figure>
       </div>
@@ -282,7 +282,7 @@ function buildReport() {
           ${stat('New Payoff', s.withNew.endDate)}
         </div>
         <figure class="fig fig--full">
-          <figcaption>Fig. 3 — Remaining balance: baseline vs scenario</figcaption>
+          <figcaption>Fig. 3 · Remaining balance: baseline vs scenario</figcaption>
           <div class="chart" id="rep-overlay"></div>
         </figure>
         <h3 class="report__h3">Baseline vs scenario</h3>
@@ -318,7 +318,7 @@ function buildReport() {
           ${stat('Years', String(v.rows.length))}
         </div>
         <figure class="fig fig--full">
-          <figcaption>Fig. 4 — Projected balance by year</figcaption>
+          <figcaption>Fig. 4 · Projected balance by year</figcaption>
           <div class="chart" id="rep-savings"></div>
         </figure>
         ${ledgerHtml(v.rows, SAV_COLS, 'years')}
@@ -328,7 +328,7 @@ function buildReport() {
   html += `
     <footer class="report__footer">
       <div class="masthead__rule"></div>
-      <p>The Mortgage Report — generated ${today}. Figures are estimates produced by amortization and compound-interest models, not financial advice. Verify with your lender before acting.</p>
+      <p>The Mortgage Report, generated ${today}. Figures are estimates from standard amortization and compound-interest math, not financial advice. Check the numbers with your lender before you act on them.</p>
     </footer>`;
 
   $('#report').innerHTML = html;

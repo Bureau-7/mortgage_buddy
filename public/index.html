@@ -24,7 +24,7 @@
         </select>
       </span>
     </div>
-    <p class="masthead__strap">A guided mortgage &amp; savings report — fill the steps, print the brief</p>
+    <p class="masthead__strap">A guided mortgage and savings calculator that ends in a report you can print</p>
     <div class="masthead__rule masthead__rule--bottom"></div>
   </header>
 
@@ -43,8 +43,19 @@
 
     <!-- ===================== STEP 1: MORTGAGE ===================== -->
     <section class="step is-active" id="step-1">
+      <div class="intro">
+        <p class="intro__lead">This tool turns your mortgage numbers into a printable brief.</p>
+        <p>Enter your loan to see the full repayment schedule and what it costs you in interest over the years. From there you can test an overpayment, a one-off lump sum, or a change in rate, and project some savings on the side.</p>
+        <p>The last step gathers it all into a one-page report you can read on screen or save as a PDF.</p>
+        <ol class="intro__steps">
+          <li><strong>Mortgage</strong>: your loan today</li>
+          <li><strong>Simulation</strong>: try a what-if (optional)</li>
+          <li><strong>Savings</strong>: project a pot (optional)</li>
+          <li><strong>Report</strong>: print or save as PDF</li>
+        </ol>
+      </div>
       <div class="step__head">
-        <span class="step__kicker">Step 1 of 4 — required</span>
+        <span class="step__kicker">Step 1 of 4 · required</span>
         <h2 class="step__title">Your mortgage</h2>
         <p class="step__lede">Enter the loan as it stands today. These figures anchor the whole report.</p>
       </div>
@@ -90,7 +101,7 @@
     <!-- ===================== STEP 2: SIMULATION ===================== -->
     <section class="step" id="step-2">
       <div class="step__head">
-        <span class="step__kicker">Step 2 of 4 — optional</span>
+        <span class="step__kicker">Step 2 of 4 · optional</span>
         <h2 class="step__title">Test a scenario</h2>
         <p class="step__lede">Overpay, drop a lump sum, or model a rate change. Skip to keep the baseline only.</p>
       </div>
@@ -133,7 +144,7 @@
     <!-- ===================== STEP 3: SAVINGS ===================== -->
     <section class="step" id="step-3">
       <div class="step__head">
-        <span class="step__kicker">Step 3 of 4 — optional</span>
+        <span class="step__kicker">Step 3 of 4 · optional</span>
         <h2 class="step__title">Savings outlook</h2>
         <p class="step__lede">Project a pot alongside the mortgage. Period is prefilled from your term.</p>
       </div>
@@ -189,7 +200,7 @@
 
   <footer class="colophon" id="screen-colophon">
     <div class="masthead__rule"></div>
-    <p>The Mortgage Report — a Node.js port of Mortgage Buddy. Figures are estimates, not financial advice.</p>
+    <p>The Mortgage Report. A Node.js port of Mortgage Buddy. Figures are estimates, not financial advice.</p>
   </footer>
 
   <script src="/vendor/echarts/echarts.min.js"></script>
