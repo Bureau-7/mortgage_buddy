@@ -240,6 +240,9 @@ input:focus { outline: none; border-color: var(--accent); box-shadow: inset 0 -2
 
 .colophon { max-width: var(--maxw); margin: 0 auto; padding: 0 24px 40px; }
 .colophon p { font-size: 0.8rem; color: var(--ink-faint); text-align: center; padding-top: 8px; font-style: italic; }
+.colophon p + p { padding-top: 4px; }
+.colophon a { color: inherit; text-decoration: underline; text-decoration-color: var(--rule-strong); text-underline-offset: 2px; }
+.colophon a:hover { text-decoration-color: var(--ink-faint); }
 
 /* -------------------- Responsive -------------------- */
 @media (max-width: 720px) {
