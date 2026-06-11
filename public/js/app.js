@@ -80,11 +80,11 @@ function updateLtv() {
 ['#m-balance', '#m-value'].forEach((s) => $(s).addEventListener('input', updateLtv));
 
 // ------------------------- Step 1: Mortgage -------------------------
-$('#mortgage-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
+// Compute + show the inline preview. Returns true on success.
+async function computeMortgage() {
   const warn = $('#m-warn');
   const balance = parseNum($('#m-balance').value);
-  if (!(balance > 0)) { showWarn(warn, 'Current Mortgage Balance must be greater than 0.'); return; }
+  if (!(balance > 0)) { showWarn(warn, 'Current Mortgage Balance must be greater than 0.'); return false; }
   showWarn(warn, '');
 
   const inputs = {
@@ -97,7 +97,7 @@ $('#mortgage-form').addEventListener('submit', async (e) => {
 
   let data;
   try { data = await api('/api/mortgage', inputs); }
-  catch (err) { showWarn(warn, err.message); return; }
+  catch (err) { showWarn(warn, err.message); return false; }
 
   state.mortgage = { inputs, data };
   // Carry values forward.
@@ -109,13 +109,13 @@ $('#mortgage-form').addEventListener('submit', async (e) => {
   res.innerHTML = `Monthly payment <strong>${fmtMoney(data.schedule[0]['Total Payment'])}</strong> · `
     + `paid off <strong>${data.payoffDate}</strong> · total interest <strong>${fmtMoney(data.totalInterestPaid)}</strong>`
     + (data.ltv != null ? ` · LTV <strong>${data.ltv.toFixed(2)}%</strong>` : '');
-  $('#m-next').disabled = false;
-});
-$('#m-next').addEventListener('click', () => { reach(2); goTo(2); });
+  return true;
+}
+$('#mortgage-form').addEventListener('submit', (e) => { e.preventDefault(); computeMortgage(); });
+$('#m-next').addEventListener('click', async () => { if (await computeMortgage()) { reach(2); goTo(2); } });
 
 // ------------------------- Step 2: Simulation -------------------------
-$('#sim-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
+async function computeSim() {
   const warn = $('#s-warn');
   const balance = parseNum($('#s-balance').value);
   const lump = parseNum($('#s-lump').value) || 0;
@@ -124,31 +124,31 @@ $('#sim-form').addEventListener('submit', async (e) => {
   const extra = parseNum($('#s-extra').value) || 0;
 
   const pairBad = (newRate > 0 && !newDate) || (newDate && newRate === 0);
-  if (!(balance > 0)) { showWarn(warn, 'Balance must be greater than 0.'); return; }
-  if (pairBad) { showWarn(warn, 'Both the new mortgage rate and the date it kicks in must be provided together.'); return; }
+  if (!(balance > 0)) { showWarn(warn, 'Balance must be greater than 0.'); return false; }
+  if (pairBad) { showWarn(warn, 'Both the new mortgage rate and the date it kicks in must be provided together.'); return false; }
   showWarn(warn, lump > balance ? 'Note: lump sum exceeds the balance.' : '');
 
   const inputs = { interestRate: state.mortgage.inputs.interestRate, yearsLeft: state.mortgage.inputs.yearsLeft, startDate: state.mortgage.inputs.startDate, balance, additionalRepayment: extra, lumpSum: lump, newRate, newRateDate: newDate };
   let data;
   try { data = await api('/api/simulate', inputs); }
-  catch (err) { showWarn(warn, err.message); return; }
+  catch (err) { showWarn(warn, err.message); return false; }
 
   state.sim = { inputs, data };
   const res = $('#s-result');
   res.hidden = false;
   res.innerHTML = `Interest saved <strong>${fmtMoney(data.interestSavings)}</strong> · `
     + `months saved <strong>${data.monthsSaved}</strong> · new payoff <strong>${data.withNew.endDate}</strong>`;
-  $('#s-next').disabled = false;
-});
-$('#s-skip').addEventListener('click', () => { state.sim = null; $('#s-result').hidden = true; $('#s-next').disabled = true; reach(3); goTo(3); });
-$('#s-next').addEventListener('click', () => { reach(3); goTo(3); });
+  return true;
+}
+$('#sim-form').addEventListener('submit', (e) => { e.preventDefault(); computeSim(); });
+$('#s-skip').addEventListener('click', () => { state.sim = null; $('#s-result').hidden = true; reach(3); goTo(3); });
+$('#s-next').addEventListener('click', async () => { if (await computeSim()) { reach(3); goTo(3); } });
 
 // ------------------------- Step 3: Savings -------------------------
-$('#sav-form').addEventListener('submit', async (e) => {
-  e.preventDefault();
+async function computeSavings() {
   const warn = $('#v-warn');
   const principal = parseNum($('#v-amount').value);
-  if (Number.isNaN(principal)) { showWarn(warn, 'Please enter a valid number for the Amount of Savings.'); return; }
+  if (Number.isNaN(principal)) { showWarn(warn, 'Please enter a valid number for the Amount of Savings.'); return false; }
   showWarn(warn, '');
 
   const inputs = {
@@ -160,16 +160,17 @@ $('#sav-form').addEventListener('submit', async (e) => {
   };
   let data;
   try { data = await api('/api/savings', inputs); }
-  catch (err) { showWarn(warn, err.message); return; }
+  catch (err) { showWarn(warn, err.message); return false; }
 
   state.savings = { inputs, data };
   const res = $('#v-result');
   res.hidden = false;
   res.innerHTML = `Final balance <strong>${fmtMoney(data.finalBalance)}</strong> · total interest <strong>${fmtMoney(data.totalInterest)}</strong> over <strong>${data.rows.length}</strong> years`;
-  $('#v-next').disabled = false;
-});
+  return true;
+}
+$('#sav-form').addEventListener('submit', (e) => { e.preventDefault(); computeSavings(); });
 $('#v-skip').addEventListener('click', () => { state.savings = null; $('#v-result').hidden = true; reach(4); goTo(4); });
-$('#v-next').addEventListener('click', () => { reach(4); goTo(4); });
+$('#v-next').addEventListener('click', async () => { if (await computeSavings()) { reach(4); goTo(4); } });
 
 // ------------------------- Report assembly -------------------------
 function stat(label, value, cls = '') {
@@ -349,7 +350,6 @@ $('#r-restart').addEventListener('click', () => {
   state.mortgage = state.sim = state.savings = null;
   Object.keys(MAX_REACHED).forEach((k) => { if (k !== '1') delete MAX_REACHED[k]; });
   ['#m-result', '#s-result', '#v-result'].forEach((s) => { $(s).hidden = true; });
-  ['#m-next', '#s-next', '#v-next'].forEach((s) => { $(s).disabled = true; });
   goTo(1);
 });
 
