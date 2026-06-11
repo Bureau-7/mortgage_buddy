@@ -158,9 +158,18 @@ export function savingsChart(el, rows, symbol) {
   }, true);
 }
 
-/** Resize all live charts (call on window resize / tab switch). */
+/** Resize all live charts (call on window resize / step change). */
 export function resizeAll() {
   for (const inst of instances.values()) inst.resize();
 }
 
+/** Dispose every chart instance — call before re-assembling the report DOM. */
+export function disposeAll() {
+  for (const inst of instances.values()) inst.dispose();
+  instances.clear();
+}
+
 window.addEventListener('resize', resizeAll);
+// Re-fit charts for the print/PDF page geometry, then restore.
+window.addEventListener('beforeprint', resizeAll);
+window.addEventListener('afterprint', resizeAll);

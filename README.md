@@ -8,23 +8,30 @@ fine hairline rules, ruled ledgers, a muted ink palette and a single accent.
 
 ## What it does
 
-Three sections, mirroring the original app's pages:
+A guided 4-step flow that ends in one consolidated, printable report (PDF via the
+browser's print dialog):
 
-1. **Mortgage Details**, monthly amortization schedule for a given rate, term and
-   balance. Live Loan-to-Value readout, payment-composition chart, principal-vs-interest
-   donut, and a ruled repayment ledger.
-2. **Simulation & Analysis**, re-runs the schedule with an **additional monthly
-   repayment**, a **one-time lump sum**, and/or a **mid-term rate change**, then
-   overlays the remaining-balance curves and prints the original 7-branch summary
-   sentence (interest saved, months saved, payoff date).
-3. **Savings**, yearly compound-interest projection with an inflation toggle
-   (real monetary value). Prefills the savings period from the mortgage term and
-   shows a Mortgage Summary card carried over from the simulation.
+1. **Mortgage** (required), rate, term, balance, optional property value (live
+   Loan-to-Value) and start date. Anchors the whole report.
+2. **Simulation** (optional), overpay monthly, drop a **one-time lump sum**, and/or
+   model a **mid-term rate change**. Skippable.
+3. **Savings** (optional), yearly compound-interest projection with an inflation
+   toggle (real monetary value); the period prefills from the mortgage term. Skippable.
+4. **Report**, assembles everything into an editorial brief: dateline + parameter
+   strip, **I · Repayment Overview** (stat row, payment-composition chart,
+   principal-vs-interest donut, repayment ledger), **II · Scenario Analysis** (the
+   original 7-branch summary sentence, interest/months saved, baseline-vs-scenario
+   overlay + comparison table), and **III · Savings Outlook** (growth chart + table).
+   Optional sections are omitted if their step was skipped.
+
+State carries across the whole flow (balance into simulation, term into savings period).
 
 ### Beyond the original
 
-Live LTV · payoff-date + months-saved callouts · interest/principal donut ·
-CSV export of the schedule · print/PDF "report" view · currency selector (£/$/€).
+Guided wizard with a progress stepper · single assembled report · **Download PDF**
+(print stylesheet, page breaks, zero deps) · live LTV · payoff-date + months-saved
+callouts · interest/principal donut · CSV export of the schedule · currency selector
+(£/$/€).
 
 ## Run it
 
